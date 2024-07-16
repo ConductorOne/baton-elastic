@@ -27,6 +27,10 @@ var (
 		Id:          "organization",
 		DisplayName: "Organization",
 	}
+	roleMappingResourceType = &v2.ResourceType{
+		Id:          "roleMapping",
+		DisplayName: "Role Mapping",
+	}
 )
 
 func annotationsForUserResourceType() annotations.Annotations {

@@ -96,6 +96,17 @@ func (c *Client) ListDeploymentRoles(ctx context.Context) (map[string]Deployment
 	return res, nil
 }
 
+// ListDeploymentRoleMapping returns a list of all Elastic roles on deployment.
+func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]DeploymentRole, error) {
+	res := make(map[string]DeploymentRole)
+	usersUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping")
+	if err := c.doRequest(ctx, usersUrl, &res, http.MethodGet, nil); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 // DeploymentAuth returns info about user that is authenticated with the deployment api key.
 func (c *Client) DeploymentAuth(ctx context.Context) error {
 	var res struct {
@@ -119,6 +130,47 @@ func (c *Client) DeploymentAuth(ctx context.Context) error {
 func (c *Client) UpdateUser(ctx context.Context, username string, user DeploymentUser) error {
 	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/user/", username)
 	requestBody, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+
+	var res struct {
+		Created bool `json:"created"`
+	}
+
+	e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody)
+	if e != nil {
+		return fmt.Errorf("error updating user: %w", e)
+	}
+
+	return nil
+}
+
+// CreateUserMappingRole creates mapping role.
+func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBody, name string) error {
+	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping/"+name)
+	requestBody, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	var res struct {
+		Created bool `json:"created"`
+	}
+
+	e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody)
+	if e != nil {
+		return fmt.Errorf("error updating user: %w", e)
+	}
+
+	return nil
+}
+
+// AddDeploymentRoleMapping creates mapping role.
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-put-role.html#security-api-put-role-example
+func (c *Client) AddDeploymentRoleMapping(ctx context.Context, body RequestRoleBody, name string) error {
+	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role/"+name)
+	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
