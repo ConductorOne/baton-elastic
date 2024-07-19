@@ -158,8 +158,7 @@ func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBod
 		Created bool `json:"created"`
 	}
 
-	e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody)
-	if e != nil {
+	if e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody); e != nil {
 		return fmt.Errorf("error updating user: %w", e)
 	}
 
@@ -179,8 +178,7 @@ func (c *Client) AddDeploymentRoleMapping(ctx context.Context, body RequestRoleB
 		Created bool `json:"created"`
 	}
 
-	e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody)
-	if e != nil {
+	if e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody); e != nil {
 		return fmt.Errorf("error updating user: %w", e)
 	}
 
