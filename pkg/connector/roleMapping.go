@@ -21,7 +21,7 @@ func (d *roleMappingBuilder) ResourceType(ctx context.Context) *v2.ResourceType 
 	return d.resourceType
 }
 
-// Create a new connector resource for Elastic deployment user.
+// Create a new connector resource for role mapping.
 func roleMappingResource(role string) (*v2.Resource, error) {
 	profile := map[string]interface{}{
 		"role_mapping_id":   role,
