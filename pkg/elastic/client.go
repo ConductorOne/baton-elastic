@@ -99,8 +99,8 @@ func (c *Client) ListDeploymentRoles(ctx context.Context) (map[string]Deployment
 // ListDeploymentRoleMapping returns a list of all Elastic roles on deployment.
 func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]DeploymentRole, error) {
 	res := make(map[string]DeploymentRole)
-	usersUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping")
-	if err := c.doRequest(ctx, usersUrl, &res, http.MethodGet, nil); err != nil {
+	roleMappingUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping")
+	if err := c.doRequest(ctx, roleMappingUrl, &res, http.MethodGet, nil); err != nil {
 		return nil, err
 	}
 
@@ -148,7 +148,7 @@ func (c *Client) UpdateUser(ctx context.Context, username string, user Deploymen
 
 // CreateUserMappingRole creates mapping role.
 func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBody, name string) error {
-	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping/"+name)
+	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", name)
 	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return err

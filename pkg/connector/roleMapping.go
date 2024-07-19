@@ -28,17 +28,15 @@ func roleMappingResource(role string) (*v2.Resource, error) {
 		"role_mapping_name": role,
 	}
 
-	status := v2.UserTrait_Status_STATUS_UNSPECIFIED
-	userTraitOptions := []rs.UserTraitOption{
-		rs.WithUserProfile(profile),
-		rs.WithStatus(status),
+	roleOptions := []rs.RoleTraitOption{
+		rs.WithRoleProfile(profile),
 	}
 
-	ret, err := rs.NewUserResource(
+	ret, err := rs.NewRoleResource(
 		role,
 		roleMappingResourceType,
 		role,
-		userTraitOptions,
+		roleOptions,
 	)
 	if err != nil {
 		return nil, err
@@ -55,7 +53,7 @@ func (d *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.Reso
 
 	roles, err := d.client.ListDeploymentRoleMapping(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing deployment users: %w", err)
+		return nil, "", nil, fmt.Errorf("error listing role mappings: %w", err)
 	}
 
 	var rv []*v2.Resource
