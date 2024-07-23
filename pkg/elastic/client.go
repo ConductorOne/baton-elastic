@@ -97,14 +97,25 @@ func (c *Client) ListDeploymentRoles(ctx context.Context) (map[string]Deployment
 }
 
 // ListDeploymentRoleMapping returns a list of all Elastic roles on deployment.
-func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]DeploymentRole, error) {
-	res := make(map[string]DeploymentRole)
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-role-mapping.html
+func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]MappingRolesBody, error) {
+	res := make(map[string]MappingRolesBody)
 	roleMappingUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping")
 	if err := c.doRequest(ctx, roleMappingUrl, &res, http.MethodGet, nil); err != nil {
 		return nil, err
 	}
 
 	return res, nil
+}
+
+func (c *Client) DeleteDeploymentRoleMapping(ctx context.Context, name string) error {
+	var res any
+	roleMappingUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", name)
+	if err := c.doRequest(ctx, roleMappingUrl, &res, http.MethodDelete, nil); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // DeploymentAuth returns info about user that is authenticated with the deployment api key.
@@ -147,8 +158,28 @@ func (c *Client) UpdateUser(ctx context.Context, username string, user Deploymen
 }
 
 // CreateUserMappingRole creates mapping role.
-func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBody, name string) error {
-	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", name)
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-role-mapping.html
+func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBody, roleMappingName string) error {
+	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", roleMappingName)
+	requestBody, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	var res struct {
+		Created bool `json:"created"`
+	}
+
+	if e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody); e != nil {
+		return fmt.Errorf("error updating user: %w", e)
+	}
+
+	return nil
+}
+
+// AddUsers creates mapping role.
+func (c *Client) AddUsersWithRoles(ctx context.Context, body UserBody, name string) error {
+	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/user", name)
 	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return err

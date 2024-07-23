@@ -70,3 +70,15 @@ type Indices struct {
 	FieldSecurity FieldSecurity `json:"field_security,omitempty"`
 	Query         string        `json:"query,omitempty"`
 }
+
+type UserBody struct {
+	Password string       `json:"password,omitempty"`
+	Roles    []string     `json:"roles,omitempty"`
+	FullName string       `json:"full_name,omitempty"`
+	Email    string       `json:"email,omitempty"`
+	Metadata UserMetadata `json:"metadata,omitempty"`
+}
+
+type UserMetadata struct {
+	Intelligence int `json:"intelligence,omitempty"`
+}

@@ -8,6 +8,8 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
+	grant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
@@ -69,13 +71,61 @@ func (d *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.Reso
 }
 
 // Entitlements always returns an empty slice for users.
-func (d *roleMappingBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (d *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+	var rv []*v2.Entitlement
+	roles, err := d.client.ListDeploymentRoleMapping(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	for roleMappingName, role := range roles {
+		for _, mappingRole := range role.Roles {
+			assignmentOptions := []ent.EntitlementOption{
+				ent.WithGrantableTo(roleMappingResourceType),
+				ent.WithDisplayName(fmt.Sprintf("%s Role %s", resource.DisplayName, roleMappingName)),
+				ent.WithDescription(fmt.Sprintf("Member of %s elasticsearch role", resource.DisplayName)),
+			}
+
+			rv = append(rv, ent.NewAssignmentEntitlement(
+				resource,
+				mappingRole,
+				assignmentOptions...,
+			))
+		}
+	}
+
+	return rv, "", nil, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
 func (d *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+	roles, err := d.client.ListDeploymentRoleMapping(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+
+	var rv []*v2.Grant
+	for roleMappingName, role := range roles {
+		if roleMappingName != resource.Id.Resource {
+			continue
+		}
+
+		for _, user := range role.Rules.Field.Username {
+			ur, err := deploymentUserResource(&elastic.DeploymentUser{
+				Username: user,
+			})
+			if err != nil {
+				return nil, "", nil, fmt.Errorf("error creating role mapping resource for role %s: %w", resource.Id.Resource, err)
+			}
+
+			for _, mappingRole := range role.Roles {
+				gr := grant.NewGrant(resource, mappingRole, ur.Id)
+				rv = append(rv, gr)
+			}
+		}
+	}
+
+	return rv, "", nil, nil
 }
 
 func newRoleMappingBuilder(client *elastic.Client, shouldSyncDeployment bool) *roleMappingBuilder {
