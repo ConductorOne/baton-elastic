@@ -115,11 +115,11 @@ func (d *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 				Username: user,
 			})
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("error creating role mapping resource for role %s: %w", resource.Id.Resource, err)
+				return nil, "", nil, fmt.Errorf("error creating role mapping resource for user %s: %w", resource.Id.Resource, err)
 			}
 
-			for _, mappingRole := range role.Roles {
-				gr := grant.NewGrant(resource, mappingRole, ur.Id)
+			for _, roleName := range role.Roles {
+				gr := grant.NewGrant(resource, roleName, ur.Id)
 				rv = append(rv, gr)
 			}
 		}
