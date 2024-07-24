@@ -41,13 +41,13 @@ func TestClientCreateRoleMapping(t *testing.T) {
 	body := elastic.MappingRolesBody{
 		Roles:   []string{"user", "admin", "my_admin_role"},
 		Enabled: true,
-		Rules: elastic.Roles{
+		Rules: elastic.Rule{
 			Field: elastic.Field{
 				Username: []string{"2717014785", "esadmin02", "Miguel Chavez"},
 			},
 		},
 	}
-	err := cli.CreateUserMappingRole(ctx, body, "mapping1")
+	err := cli.UpdateUserMappingRole(ctx, body, "mapping1")
 	assert.Nil(t, err)
 }
 
@@ -82,7 +82,7 @@ func TestClientAddRoleMapping(t *testing.T) {
 			Version: 1,
 		},
 	}
-	err := cli.AddDeploymentRoleMapping(ctx, body, "my_admin_role")
+	err := cli.AddDeploymentRole(ctx, body, "my_admin_role")
 	assert.Nil(t, err)
 }
 
@@ -107,7 +107,7 @@ func TestClientAddRoleMappingV2(t *testing.T) {
 			},
 		},
 	}
-	err := cli.AddDeploymentRoleMapping(ctx, body, "clicks_admin")
+	err := cli.AddDeploymentRole(ctx, body, "clicks_admin")
 	assert.Nil(t, err)
 }
 
