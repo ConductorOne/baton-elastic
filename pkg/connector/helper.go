@@ -2,26 +2,26 @@ package connector
 
 import "strings"
 
-type Anonymous struct {
+type Utility struct {
 	Data string
 }
 
-func (e *Anonymous) TrimPrefix(prefix string) *Anonymous {
-	return &Anonymous{
+func (e *Utility) TrimPrefix(prefix string) *Utility {
+	return &Utility{
 		Data: strings.TrimPrefix(e.Data, prefix),
 	}
 }
 
-func (e *Anonymous) TrimSuffix(suffix string) *Anonymous {
-	return &Anonymous{
+func (e *Utility) TrimSuffix(suffix string) *Utility {
+	return &Utility{
 		Data: strings.TrimSuffix(e.Data, suffix),
 	}
 }
 
-func (e *Anonymous) Split(sep string) []string {
+func (e *Utility) Split(sep string) []string {
 	return strings.Split(e.Data, sep)
 }
 
-func (e *Anonymous) ToString() string {
+func (e *Utility) ToString() string {
 	return e.Data
 }

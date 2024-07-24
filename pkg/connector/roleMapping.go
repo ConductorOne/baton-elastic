@@ -112,7 +112,7 @@ func (r *roleMappingBuilder) GetRoleMappingUsers(ctx context.Context, name strin
 
 	for _, role := range roles {
 		if field := role.Rules.(map[string]any)["field"]; field != nil {
-			userData := Anonymous{
+			userData := Utility{
 				Data: fmt.Sprintf("%s", field.(map[string]any)["username"]),
 			}
 			users = userData.TrimPrefix("[").TrimSuffix("]").Split(" ")
@@ -136,7 +136,7 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 		}
 
 		if field := role.Rules.(map[string]any)["field"]; field != nil {
-			userData := Anonymous{
+			userData := Utility{
 				Data: fmt.Sprintf("%s", field.(map[string]any)["username"]),
 			}
 			users := userData.TrimPrefix("[").TrimSuffix("]").Split(" ")
