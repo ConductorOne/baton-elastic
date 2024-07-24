@@ -41,14 +41,13 @@ jobs:
     env:
       BATON_LOG_LEVEL: debug
       # Add any environment variables needed to run baton-bitbucket-datacenter
-      BATON_BITBUCKETDC_BASEURL: 'http://localhost:7990'
       BATON_DEPLOYMENT_API_KEY: ${{ secrets.BATON_DEPLOYMENT_API_KEY }}
       BATON_DEPLOYMENT_ENDPOINT: ${{ secrets.BATON_DEPLOYMENT_ENDPOINT }}
       BATON_ORGANIZATION_ID: ${{ secrets.BATON_ORGANIZATION_ID }}
       BATON_API_KEY: ${{ secrets.BATON_API_KEY }}
       # The following parameters are passed to grant/revoke commands
-      CONNECTOR_GRANT: 'roleMapping:mapping7:kibana_admin:deploymentUser:jacknich'
-      CONNECTOR_ENTITLEMENT: 'roleMapping:mapping7:kibana_admin'
+      CONNECTOR_GRANT: 'roleMapping:mapping7:member:deploymentUser:jacknich'
+      CONNECTOR_ENTITLEMENT: 'roleMapping:mapping7:member'
       CONNECTOR_PRINCIPAL_TYPE: 'deploymentUser'
       CONNECTOR_PRINCIPAL: 'jacknich'
     steps:
