@@ -6,22 +6,22 @@ type Utility struct {
 	Data string
 }
 
-func (e *Utility) TrimPrefix(prefix string) *Utility {
+func (u *Utility) TrimPrefix(prefix string) *Utility {
 	return &Utility{
-		Data: strings.TrimPrefix(e.Data, prefix),
+		Data: strings.TrimPrefix(u.Data, prefix),
 	}
 }
 
-func (e *Utility) TrimSuffix(suffix string) *Utility {
+func (u *Utility) TrimSuffix(suffix string) *Utility {
 	return &Utility{
-		Data: strings.TrimSuffix(e.Data, suffix),
+		Data: strings.TrimSuffix(u.Data, suffix),
 	}
 }
 
-func (e *Utility) Split(sep string) []string {
-	return strings.Split(e.Data, sep)
+func (u *Utility) Split(sep string) []string {
+	return strings.Split(u.Data, sep)
 }
 
-func (e *Utility) ToString() string {
-	return e.Data
+func (u *Utility) ToString() string {
+	return u.Data
 }

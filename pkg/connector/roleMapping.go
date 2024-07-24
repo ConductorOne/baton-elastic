@@ -76,9 +76,9 @@ func (r *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.Reso
 }
 
 // Entitlements always returns an empty slice for users.
-func (d *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
-	roles, err := d.client.ListDeploymentRoleMapping(ctx)
+	roles, err := r.client.ListDeploymentRoleMapping(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}
