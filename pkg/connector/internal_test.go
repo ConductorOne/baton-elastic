@@ -2,6 +2,7 @@ package connector
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/conductorone/baton-elastic/pkg/elastic"
@@ -11,14 +12,10 @@ import (
 )
 
 var (
-	// apiKey             = os.Getenv("BATON_API_KEY=")
-	// organizationID     = os.Getenv("BATON_ORGANIZATION_ID")
-	// deploymentApiKey   = os.Getenv("BATON_DEPLOYMENT_API_KEY==")
-	// deploymentEndpoint = os.Getenv("BATON_DEPLOYMENT_ENDPOINT")
-	deploymentEndpoint = "https://28ef1caa9b284ae7ada31e30dc7f02aa.us-east-2.aws.elastic-cloud.com:443"
-	deploymentApiKey   = "RURJUHBKQUJhc0N6S1ZsSzFhaGE6Z1RBdEJWdVdTdE9RNXk3anNhcWtRZw=="
-	apiKey             = "essu_UkZabFpHODFRVUpETFcxcWVTMU1iazh4V1RZNlNWTlphMlV3TUY5UmQyVkxUM0JsUkMwelMxRjJVUT09AAAAANlyTyQ="
-	organizationID     = "2539393048"
+	apiKey             = os.Getenv("BATON_API_KEY=")
+	organizationID     = os.Getenv("BATON_ORGANIZATION_ID")
+	deploymentApiKey   = os.Getenv("BATON_DEPLOYMENT_API_KEY==")
+	deploymentEndpoint = os.Getenv("BATON_DEPLOYMENT_ENDPOINT")
 	ctx                = context.Background()
 )
 
