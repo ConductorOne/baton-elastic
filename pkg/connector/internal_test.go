@@ -152,9 +152,9 @@ func TestAddUsers(t *testing.T) {
 
 	cli := getClientForTesting(ctx)
 	assert.Nil(t, cli)
-	// It adds deployment role when adding users
+	// It adds deployment roles when adding users
 	body := elastic.UserBody{
-		Password: "Shrimp2013-",
+		Password: "secretpwd",
 		Roles: []string{"superuser",
 			"viewer",
 			"kibana_admin",
