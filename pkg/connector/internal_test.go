@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/conductorone/baton-elastic/pkg/elastic"
@@ -12,10 +11,14 @@ import (
 )
 
 var (
-	apiKey             = os.Getenv("BATON_API_KEY=")
-	organizationID     = os.Getenv("BATON_ORGANIZATION_ID")
-	deploymentApiKey   = os.Getenv("BATON_DEPLOYMENT_API_KEY==")
-	deploymentEndpoint = os.Getenv("BATON_DEPLOYMENT_ENDPOINT")
+	// apiKey             = os.Getenv("BATON_API_KEY=")
+	// organizationID     = os.Getenv("BATON_ORGANIZATION_ID")
+	// deploymentApiKey   = os.Getenv("BATON_DEPLOYMENT_API_KEY==")
+	// deploymentEndpoint = os.Getenv("BATON_DEPLOYMENT_ENDPOINT")
+	deploymentEndpoint = "https://28ef1caa9b284ae7ada31e30dc7f02aa.us-east-2.aws.elastic-cloud.com:443"
+	deploymentApiKey   = "RURJUHBKQUJhc0N6S1ZsSzFhaGE6Z1RBdEJWdVdTdE9RNXk3anNhcWtRZw=="
+	apiKey             = "essu_UkZabFpHODFRVUpETFcxcWVTMU1iazh4V1RZNlNWTlphMlV3TUY5UmQyVkxUM0JsUkMwelMxRjJVUT09AAAAANlyTyQ="
+	organizationID     = "2539393048"
 	ctx                = context.Background()
 )
 
@@ -31,7 +34,19 @@ func TestClientListDeploymentRoleMapping(t *testing.T) {
 	assert.NotNil(t, res)
 }
 
-func TestClientCreateRoleMapping(t *testing.T) {
+func TestClientGetDeploymentRoleMapping(t *testing.T) {
+	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
+		t.Skip()
+	}
+
+	cli := getClientForTesting(ctx)
+	assert.Nil(t, cli)
+	res, err := cli.GetDeploymentRoleMapping(ctx, "mapping7")
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+}
+
+func TestClientUpdateUsersWithinRoleMapping(t *testing.T) {
 	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
 		t.Skip()
 	}
@@ -39,19 +54,26 @@ func TestClientCreateRoleMapping(t *testing.T) {
 	cli := getClientForTesting(ctx)
 	assert.Nil(t, cli)
 	body := elastic.MappingRolesBody{
-		Roles:   []string{"user", "admin", "my_admin_role"},
+		Roles: []string{"superuser",
+			"viewer",
+			"kibana_admin",
+			"transform_admin",
+			"inference_admin",
+			"user",
+			"admin",
+		},
 		Enabled: true,
-		Rules: elastic.Roles{
+		Rules: elastic.Rule{
 			Field: elastic.Field{
-				Username: []string{"2717014785", "esadmin02", "Miguel Chavez"},
+				Username: []string{"jacknich", "bryancooper"},
 			},
 		},
 	}
-	err := cli.CreateUserMappingRole(ctx, body, "mapping1")
+	err := cli.UpdateUserMappingRole(ctx, body, "mapping7")
 	assert.Nil(t, err)
 }
 
-func TestClientAddRoleMapping(t *testing.T) {
+func TestClientAddDeploymentRole(t *testing.T) {
 	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
 		t.Skip()
 	}
@@ -82,11 +104,11 @@ func TestClientAddRoleMapping(t *testing.T) {
 			Version: 1,
 		},
 	}
-	err := cli.AddDeploymentRoleMapping(ctx, body, "my_admin_role")
+	err := cli.AddDeploymentRole(ctx, body, "my_admin_role")
 	assert.Nil(t, err)
 }
 
-func TestClientAddRoleMappingV2(t *testing.T) {
+func TestClientAddDeploymentRoleV2(t *testing.T) {
 	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
 		t.Skip()
 	}
@@ -107,7 +129,7 @@ func TestClientAddRoleMappingV2(t *testing.T) {
 			},
 		},
 	}
-	err := cli.AddDeploymentRoleMapping(ctx, body, "clicks_admin")
+	err := cli.AddDeploymentRole(ctx, body, "clicks_admin")
 	assert.Nil(t, err)
 }
 
@@ -124,4 +146,53 @@ func getClientForTesting(ctx context.Context) *elastic.Client {
 		apiKey,
 		organizationID,
 	)
+}
+
+func TestAddUsers(t *testing.T) {
+	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
+		t.Skip()
+	}
+
+	cli := getClientForTesting(ctx)
+	assert.Nil(t, cli)
+	// It adds deployment role when adding users
+	body := elastic.UserBody{
+		Password: "Shrimp2013-",
+		Roles: []string{"superuser",
+			"viewer",
+			"kibana_admin",
+			"transform_admin",
+			"inference_admin",
+		},
+		FullName: "Jack Nicholson",
+		Email:    "jacknich@example.com",
+		Metadata: elastic.UserMetadata{
+			Intelligence: 7,
+		},
+	}
+	err := cli.AddUsersWithRoles(ctx, body, "bryancooper")
+	assert.Nil(t, err)
+}
+
+func TestListDeploymentUsers(t *testing.T) {
+	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
+		t.Skip()
+	}
+
+	cli := getClientForTesting(ctx)
+	assert.Nil(t, cli)
+	res, _ := cli.ListDeploymentUsers(ctx)
+	assert.Nil(t, res)
+}
+
+func TestDeleteDeploymentRoleMapping(t *testing.T) {
+	if apiKey == "" && organizationID == "" && deploymentApiKey == "" && deploymentEndpoint == "" {
+		t.Skip()
+	}
+
+	cli := getClientForTesting(ctx)
+	assert.Nil(t, cli)
+
+	err := cli.DeleteDeploymentRoleMapping(ctx, "mapping2")
+	assert.Nil(t, err)
 }
