@@ -78,26 +78,17 @@ func (r *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.Reso
 // Entitlements always returns an empty slice for users.
 func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
-	roles, err := r.client.ListDeploymentRoleMapping(ctx)
-	if err != nil {
-		return nil, "", nil, err
+	assignmentOptions := []ent.EntitlementOption{
+		ent.WithGrantableTo(deploymentUserResourceType),
+		ent.WithDisplayName(fmt.Sprintf("%s Role %s", resource.DisplayName, roleMembership)),
+		ent.WithDescription(fmt.Sprintf("Member of %s elasticsearch role", resource.DisplayName)),
 	}
 
-	for roleMappingName, role := range roles {
-		for _, mappingRole := range role.Roles {
-			assignmentOptions := []ent.EntitlementOption{
-				ent.WithGrantableTo(roleMappingResourceType),
-				ent.WithDisplayName(fmt.Sprintf("%s Role %s", resource.DisplayName, roleMappingName)),
-				ent.WithDescription(fmt.Sprintf("Member of %s elasticsearch role", resource.DisplayName)),
-			}
-
-			rv = append(rv, ent.NewAssignmentEntitlement(
-				resource,
-				mappingRole,
-				assignmentOptions...,
-			))
-		}
-	}
+	rv = append(rv, ent.NewAssignmentEntitlement(
+		resource,
+		roleMembership,
+		assignmentOptions...,
+	))
 
 	return rv, "", nil, nil
 }
@@ -148,10 +139,8 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 					return nil, "", nil, fmt.Errorf("error creating role mapping resource for user %s: %w", resource.Id.Resource, err)
 				}
 
-				for _, roleName := range role.Roles {
-					gr := grant.NewGrant(resource, roleName, ur.Id)
-					rv = append(rv, gr)
-				}
+				gr := grant.NewGrant(resource, roleMembership, ur.Id)
+				rv = append(rv, gr)
 			}
 		}
 	}
