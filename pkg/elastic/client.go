@@ -98,9 +98,21 @@ func (c *Client) ListDeploymentRoles(ctx context.Context) (map[string]Deployment
 
 // ListDeploymentRoleMapping returns a list of all Elastic roles on deployment.
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-role-mapping.html
-func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]MappingRolesBody, error) {
-	res := make(map[string]MappingRolesBody)
+func (c *Client) ListDeploymentRoleMapping(ctx context.Context) (map[string]MappingRolesResponse, error) {
+	res := make(map[string]MappingRolesResponse)
 	roleMappingUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping")
+	if err := c.doRequest(ctx, roleMappingUrl, &res, http.MethodGet, nil); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// GetDeploymentRoleMapping retrieves information about the role mapping.
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-role-mapping.html
+func (c *Client) GetDeploymentRoleMapping(ctx context.Context, name string) (map[string]MappingRolesResponse, error) {
+	res := make(map[string]MappingRolesResponse)
+	roleMappingUrl, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", name)
 	if err := c.doRequest(ctx, roleMappingUrl, &res, http.MethodGet, nil); err != nil {
 		return nil, err
 	}
@@ -157,9 +169,9 @@ func (c *Client) UpdateUser(ctx context.Context, username string, user Deploymen
 	return nil
 }
 
-// CreateUserMappingRole creates mapping role.
-// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-get-role-mapping.html
-func (c *Client) CreateUserMappingRole(ctx context.Context, body MappingRolesBody, roleMappingName string) error {
+// UpdateUserMappingRole assigns mapping roles.
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-put-role-mapping.html
+func (c *Client) UpdateUserMappingRole(ctx context.Context, body MappingRolesBody, roleMappingName string) error {
 	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role_mapping", roleMappingName)
 	requestBody, err := json.Marshal(body)
 	if err != nil {
@@ -198,7 +210,7 @@ func (c *Client) AddUsersWithRoles(ctx context.Context, body UserBody, name stri
 
 // AddDeploymentRoleMapping creates mapping role.
 // https://www.elastic.co/guide/en/elasticsearch/reference/current/security-api-put-role.html#security-api-put-role-example
-func (c *Client) AddDeploymentRoleMapping(ctx context.Context, body RequestRoleBody, name string) error {
+func (c *Client) AddDeploymentRole(ctx context.Context, body RequestRoleBody, name string) error {
 	url, _ := url.JoinPath(c.deploymentEndpoint, "_security/role", name)
 	requestBody, err := json.Marshal(body)
 	if err != nil {

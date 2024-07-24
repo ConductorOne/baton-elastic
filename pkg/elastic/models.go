@@ -28,14 +28,27 @@ type Organization struct {
 	Name string `json:"name"`
 }
 
+type MappingRolesResponse struct {
+	Roles        []string `json:"roles,omitempty"`
+	Enabled      bool     `json:"enabled,omitempty"`
+	Rules        any      `json:"rules,omitempty"`
+	RuleTemplate any      `json:"role_templates,omitempty"`
+	Metadata     any      `json:"metadata,omitempty"`
+}
+
+type Rules struct {
+	Field map[string][]any `json:"field,omitempty"`
+	All   any              `json:"all,omitempty"`
+}
+
+type Rule struct {
+	Field Field `json:"field,omitempty"`
+}
+
 type MappingRolesBody struct {
 	Roles   []string `json:"roles,omitempty"`
 	Enabled bool     `json:"enabled,omitempty"`
-	Rules   Roles    `json:"rules,omitempty"`
-}
-
-type Roles struct {
-	Field Field `json:"field,omitempty"`
+	Rules   Rule     `json:"rules,omitempty"`
 }
 
 type Field struct {
