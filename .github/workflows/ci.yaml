@@ -62,13 +62,9 @@ jobs:
       - name: Build baton-elastic
         run: go build ./cmd/baton-elastic
       - name: Run baton-elastic
-        run: |
-          ./baton-elastic
-          baton grants -t roleMapping
+        run: ./baton-elastic
       - name: Revoke grants
-        run: |
-          ./baton-elastic
-          ./baton-elastic --revoke-grant ${{ env.CONNECTOR_GRANT }}
+        run: ./baton-elastic --revoke-grant ${{ env.CONNECTOR_GRANT }}
       - name: Grant entitlement
         run: | 
           ./baton-elastic 
