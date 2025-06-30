@@ -61,10 +61,7 @@ func New(ctx context.Context, deploymentApiKey, deploymentEndpoint, apiKey, orga
 		return nil, err
 	}
 
-	shouldSyncDeployment := false
-	if deploymentEndpoint != "" {
-		shouldSyncDeployment = true
-	}
+	shouldSyncDeployment := deploymentEndpoint != ""
 
 	return &Connector{
 		client:               elastic.NewClient(httpClient, deploymentApiKey, deploymentEndpoint, apiKey, organizationID),

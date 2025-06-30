@@ -7,18 +7,18 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Run linters
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
           args: --timeout=3m
   go-test:
     strategy:
       matrix:
-        go-version: [1.22.x]
+        go-version: [1.23.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,38 +36,127 @@ jobs:
         uses: guyarb/golang-test-annotations@v0.5.1
         with:
           test-results: test.json
-  test:
+  test-self-hosted:
     runs-on: ubuntu-latest
     env:
       BATON_LOG_LEVEL: debug
-      # Add any environment variables needed to run baton-bitbucket-datacenter
       BATON_DEPLOYMENT_API_KEY: ${{ secrets.BATON_DEPLOYMENT_API_KEY }}
       BATON_DEPLOYMENT_ENDPOINT: ${{ secrets.BATON_DEPLOYMENT_ENDPOINT }}
       BATON_ORGANIZATION_ID: ${{ secrets.BATON_ORGANIZATION_ID }}
       BATON_API_KEY: ${{ secrets.BATON_API_KEY }}
-      # The following parameters are passed to grant/revoke commands
-      CONNECTOR_GRANT: 'roleMapping:mapping7:member:deploymentUser:jacknich'
-      CONNECTOR_ENTITLEMENT: 'roleMapping:mapping7:member'
-      CONNECTOR_PRINCIPAL_TYPE: 'deploymentUser'
-      CONNECTOR_PRINCIPAL: 'jacknich'
+
+      ELASTIC_GRANT: ${{ vars.GRANT }}
+      ELASTIC_ENTITLEMENT: ${{ vars.ENTITLEMENT }}
+      ELASTIC_PRINCIPAL_TYPE: ${{ vars.PRINCIPAL_TYPE }}
+      ELASTIC_PRINCIPAL: ${{ vars.PRINCIPAL }}
+
+
     steps:
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
+
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+
+      - name: Start Elasticsearch like start-local script
+        run: |
+          docker run -d --name elasticsearch \
+            -e "discovery.type=single-node" \
+            -e "xpack.security.enabled=true" \
+            -e "ELASTIC_PASSWORD=changeme" \
+            -p 9200:9200 \
+            docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+
+      - name: Wait for Elasticsearch to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s -u elastic:changeme http://localhost:9200/_security/_authenticate; then
+              echo "Elasticsearch is up"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Create test user and role mapping
+        run: |
+          curl -X POST -u elastic:changeme http://localhost:9200/_security/user/test_user \
+            -H "Content-Type: application/json" \
+            -d '{
+              "username": "test_user",
+              "password": "testpass",          
+              "roles": [],
+              "full_name": "Test User"
+            }'
+        
+          curl -X POST -u elastic:changeme http://localhost:9200/_security/user/user \
+            -H "Content-Type: application/json" \
+            -d '{
+              "username": "user",
+              "password": "testpass1",          
+              "roles": [],
+              "full_name": "user"
+            }'
+          
+          curl -X PUT -u elastic:changeme http://localhost:9200/_security/role_mapping/mapping7 \
+            -H "Content-Type: application/json" \
+            -d '{
+              "roles": ["superuser"],
+              "enabled": true,
+              "rules": {
+                "field": {
+                  "username": "user"
+              }
+            }
+          }'
+
+      - name: Create API key for Baton
+        run: |
+          api_key_response=$(curl -s -X POST -u elastic:changeme http://localhost:9200/_security/api_key \
+            -H "Content-Type: application/json" \
+            -d '{ "name": "baton-selfhosted", "role_descriptors": { "baton": { "cluster": ["all"], "index": [{ "names": ["*"], "privileges": ["all"] }] } } }')
+  
+          api_key_base64=$(echo $api_key_response | jq -r '.api_key')
+          id=$(echo $api_key_response | jq -r '.id')
+          baton_api_key=$(echo -n "$id:$api_key_base64" | base64)
+  
+          echo "BATON_DEPLOYMENT_API_KEY=$baton_api_key" >> $GITHUB_ENV
+
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+
       - name: Build baton-elastic
         run: go build ./cmd/baton-elastic
-      - name: Run baton-elastic
+
+      - name: Run initial sync
         run: ./baton-elastic
-      - name: Revoke grants
-        run: ./baton-elastic --revoke-grant ${{ env.CONNECTOR_GRANT }}
-      - name: Check grant was revoked
-        run: ./baton-elastic && baton grants --entitlement "${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
+
       - name: Grant entitlement
-        run: ./baton-elastic && ./baton-elastic --grant-entitlement ${{ env.CONNECTOR_ENTITLEMENT }} --grant-principal-type ${{ env.CONNECTOR_PRINCIPAL_TYPE }} --grant-principal ${{ env.CONNECTOR_PRINCIPAL }}  --provisioning
+        run: ./baton-elastic --grant-entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --grant-principal-type="${{ env.ELASTIC_PRINCIPAL_TYPE }}" --grant-principal="${{ env.ELASTIC_PRINCIPAL }}" --provisioning
+
+      - name: Resync after grant
+        run: ./baton-elastic
+
       - name: Check grant was granted
-        run: ./baton-elastic && baton grants --entitlement "${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+        run: |
+          baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
+          jq -e ".grants | any(.principal.resource == \"${{ env.ELASTIC_PRINCIPAL }}\")"
+
+      - name: Revoke grant
+        run: ./baton-elastic --revoke-grant="${{ env.ELASTIC_GRANT }}"
+
+      - name: Wait a few seconds for revoke to propagate
+        run: sleep 5
+
+      - name: Check grant was revoked
+        run: |
+          baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
+          jq --exit-status "if .grants then all(.grants[]; .principal.resource != \"${{ env.ELASTIC_PRINCIPAL }}\") else true end"
+
+      - name: Resync after revoke
+        run: ./baton-elastic
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f elasticsearch

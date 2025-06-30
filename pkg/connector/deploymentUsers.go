@@ -7,7 +7,6 @@ import (
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/helpers"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
@@ -24,7 +23,7 @@ func (d *deploymentUserBuilder) ResourceType(ctx context.Context) *v2.ResourceTy
 
 // Create a new connector resource for Elastic deployment user.
 func deploymentUserResource(user *elastic.DeploymentUser) (*v2.Resource, error) {
-	firstname, lastname := helpers.SplitFullName(user.FullName)
+	firstname, lastname := rs.SplitFullName(user.FullName)
 	profile := map[string]interface{}{
 		"first_name": firstname,
 		"last_name":  lastname,
