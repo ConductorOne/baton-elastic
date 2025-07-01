@@ -141,21 +141,19 @@ jobs:
       - name: Check grant was granted
         run: |
           baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
-          jq -e ".grants | any(.principal.resource == \"${{ env.ELASTIC_PRINCIPAL }}\")"
+          jq -e --arg principal "${{ env.ELASTIC_PRINCIPAL }}" '.grants // [] | any(.grant.principal.id.resource == $principal)'
 
       - name: Revoke grant
         run: ./baton-elastic --revoke-grant="${{ env.ELASTIC_GRANT }}"
 
-      - name: Wait a few seconds for revoke to propagate
-        run: sleep 5
+      - name: Resync after revoke
+        run: ./baton-elastic
 
       - name: Check grant was revoked
         run: |
           baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
-          jq --exit-status "if .grants then all(.grants[]; .principal.resource != \"${{ env.ELASTIC_PRINCIPAL }}\") else true end"
-
-      - name: Resync after revoke
-        run: ./baton-elastic
+          jq -e --arg principal "${{ env.ELASTIC_PRINCIPAL }}" \
+          '.grants // [] | all(.grant.principal.id.resource != $principal)'
 
       - name: Cleanup
         if: always()

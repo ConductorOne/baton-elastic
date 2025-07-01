@@ -95,22 +95,17 @@ func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 
 // GetRoleMappingUsers returns role mapping users.
 func (r *roleMappingBuilder) GetRoleMappingUsers(ctx context.Context, name string) ([]string, error) {
-	var users []string
-	roles, err := r.client.GetDeploymentRoleMapping(ctx, name)
+	roleMap, err := r.client.GetDeploymentRoleMapping(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, role := range roles {
-		if field := role.Rules.(map[string]any)["field"]; field != nil {
-			userData := Utility{
-				Data: fmt.Sprintf("%s", field.(map[string]any)["username"]),
-			}
-			users = userData.TrimPrefix("[").TrimSuffix("]").Split(" ")
-		}
+	role, ok := roleMap[name]
+	if !ok {
+		return nil, fmt.Errorf("role mapping %s not found", name)
 	}
 
-	return users, nil
+	return role.Rules.Field.Username, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
@@ -126,22 +121,18 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 			continue
 		}
 
-		if field := role.Rules.(map[string]any)["field"]; field != nil {
-			userData := Utility{
-				Data: fmt.Sprintf("%s", field.(map[string]any)["username"]),
-			}
-			users := userData.TrimPrefix("[").TrimSuffix("]").Split(" ")
-			for _, userName := range users {
-				ur, err := deploymentUserResource(&elastic.DeploymentUser{
-					Username: userName,
-				})
-				if err != nil {
-					return nil, "", nil, fmt.Errorf("error creating role mapping resource for user %s: %w", resource.Id.Resource, err)
-				}
+		users := role.Rules.Field.Username
 
-				gr := grant.NewGrant(resource, roleMembership, ur.Id)
-				rv = append(rv, gr)
+		for _, userName := range users {
+			ur, err := deploymentUserResource(&elastic.DeploymentUser{
+				Username: userName,
+			})
+			if err != nil {
+				return nil, "", nil, fmt.Errorf("error creating role mapping resource for user %s: %w", resource.Id.Resource, err)
 			}
+
+			gr := grant.NewGrant(resource, roleMembership, ur.Id)
+			rv = append(rv, gr)
 		}
 	}
 
@@ -150,9 +141,9 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 
 func (r *roleMappingBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
+
 	if principal.Id.ResourceType != deploymentUserResourceType.Id {
-		l.Warn(
-			"baton-elastic: only users can be granted role mapping membership",
+		l.Warn("baton-elastic: only users can be granted role mapping membership",
 			zap.String("principal_type", principal.Id.ResourceType),
 			zap.String("principal_id", principal.Id.Resource),
 		)
@@ -166,27 +157,32 @@ func (r *roleMappingBuilder) Grant(ctx context.Context, principal *v2.Resource, 
 
 	newUser := user[principal.Id.Resource]
 	roleMappingName := entitlement.Resource.Id.Resource
+
 	users, err := r.GetRoleMappingUsers(ctx, roleMappingName)
 	if err != nil {
 		return nil, err
 	}
 
-	userPos := slices.IndexFunc(users, func(c string) bool {
-		return c == newUser.Username
-	})
-	if userPos != NF {
-		l.Warn(
-			"baton-elastic: user already has this role mapping",
-			zap.String("principal_id", principal.Id.String()),
-			zap.String("principal_type", principal.Id.ResourceType),
-			zap.String("roleMappingName", roleMappingName),
-		)
+	if slices.Contains(users, newUser.Username) {
 		return nil, fmt.Errorf("baton-elastic: user %s already has this role mapping", principal.DisplayName)
 	}
 
+	roleData, err := r.client.GetDeploymentRoleMapping(ctx, roleMappingName)
+	if err != nil || len(roleData) == 0 {
+		return nil, fmt.Errorf("role mapping %s not found or error: %w", roleMappingName, err)
+	}
+
+	role, ok := roleData[roleMappingName]
+	if !ok {
+		return nil, fmt.Errorf("role mapping %s not found", roleMappingName)
+	}
+
+	currentRoles := role.Roles
+
 	users = append(users, newUser.Username)
+
 	data := elastic.MappingRolesBody{
-		Roles:   newUser.Roles,
+		Roles:   currentRoles,
 		Enabled: true,
 		Rules: elastic.Rule{
 			Field: elastic.Field{
@@ -194,6 +190,7 @@ func (r *roleMappingBuilder) Grant(ctx context.Context, principal *v2.Resource, 
 			},
 		},
 	}
+
 	err = r.client.UpdateUserMappingRole(ctx, data, roleMappingName)
 	if err != nil {
 		return nil, fmt.Errorf("baton-elastic: failed to grant role mapping to user: %w", err)
@@ -211,6 +208,7 @@ func (r *roleMappingBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annot
 	l := ctxzap.Extract(ctx)
 	principal := grant.Principal
 	entitlement := grant.Entitlement
+
 	if principal.Id.ResourceType != deploymentUserResourceType.Id {
 		l.Warn(
 			"baton-elastic: only users can have role membership revoked",
@@ -246,8 +244,19 @@ func (r *roleMappingBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annot
 	}
 
 	users = append(users[:userPos], users[userPos+1:]...)
+
+	roleData, err := r.client.GetDeploymentRoleMapping(ctx, roleMappingName)
+	if err != nil || len(roleData) == 0 {
+		return nil, fmt.Errorf("role mapping %s not found or error: %w", roleMappingName, err)
+	}
+
+	role, ok := roleData[roleMappingName]
+	if !ok {
+		return nil, fmt.Errorf("role mapping %s not found", roleMappingName)
+	}
+
 	data := elastic.MappingRolesBody{
-		Roles:   newUser.Roles,
+		Roles:   role.Roles,
 		Enabled: true,
 		Rules: elastic.Rule{
 			Field: elastic.Field{
@@ -255,6 +264,7 @@ func (r *roleMappingBuilder) Revoke(ctx context.Context, grant *v2.Grant) (annot
 			},
 		},
 	}
+
 	err = r.client.UpdateUserMappingRole(ctx, data, roleMappingName)
 	if err != nil {
 		return nil, fmt.Errorf("baton-elastic: failed to revoke role mapping to user: %w", err)
