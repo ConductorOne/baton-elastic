@@ -1,5 +1,10 @@
 package elastic
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 type DeploymentUser struct {
 	Username string      `json:"username"`
 	Roles    []string    `json:"roles"`
@@ -31,7 +36,7 @@ type Organization struct {
 type MappingRolesResponse struct {
 	Roles        []string `json:"roles,omitempty"`
 	Enabled      bool     `json:"enabled,omitempty"`
-	Rules        any      `json:"rules,omitempty"`
+	Rules        Rule     `json:"rules,omitempty"`
 	RuleTemplate any      `json:"role_templates,omitempty"`
 	Metadata     any      `json:"metadata,omitempty"`
 }
@@ -45,6 +50,24 @@ type Rule struct {
 	Field Field `json:"field,omitempty"`
 }
 
+type StringOrSlice []string
+
+func (s *StringOrSlice) UnmarshalJSON(data []byte) error {
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*s = []string{single}
+		return nil
+	}
+
+	var slice []string
+	if err := json.Unmarshal(data, &slice); err == nil {
+		*s = slice
+		return nil
+	}
+
+	return fmt.Errorf("StringOrSlice: unable to unmarshal %s", string(data))
+}
+
 type MappingRolesBody struct {
 	Roles   []string `json:"roles,omitempty"`
 	Enabled bool     `json:"enabled,omitempty"`
@@ -52,7 +75,7 @@ type MappingRolesBody struct {
 }
 
 type Field struct {
-	Username []string `json:"username,omitempty"`
+	Username StringOrSlice `json:"username,omitempty"`
 }
 
 type RequestRoleBody struct {

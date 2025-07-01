@@ -182,7 +182,7 @@ func (c *Client) UpdateUserMappingRole(ctx context.Context, body MappingRolesBod
 		Created bool `json:"created"`
 	}
 
-	if e := c.doRequest(ctx, url, &res, http.MethodPost, requestBody); e != nil {
+	if e := c.doRequest(ctx, url, &res, http.MethodPut, requestBody); e != nil {
 		return fmt.Errorf("error updating user: %w", e)
 	}
 

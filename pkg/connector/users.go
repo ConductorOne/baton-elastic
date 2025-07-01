@@ -7,7 +7,6 @@ import (
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/helpers"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
@@ -23,7 +22,7 @@ func (u *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // Create a new connector resource for Elastic user.
 func userResource(user *elastic.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
-	firstname, lastname := helpers.SplitFullName(user.Name)
+	firstname, lastname := rs.SplitFullName(user.Name)
 	profile := map[string]interface{}{
 		"first_name": firstname,
 		"last_name":  lastname,
