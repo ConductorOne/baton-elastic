@@ -46,7 +46,7 @@ func deploymentUserResource(user *elastic.DeploymentUser) (*v2.Resource, error) 
 	}
 
 	ret, err := rs.NewUserResource(
-		user.FullName,
+		user.Username,
 		deploymentUserResourceType,
 		user.Username,
 		userTraitOptions,

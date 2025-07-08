@@ -8,9 +8,10 @@ import (
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/bid"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
-	grant "github.com/conductorone/baton-sdk/pkg/types/grant"
+	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
@@ -105,10 +106,18 @@ func (r *roleMappingBuilder) GetRoleMappingUsers(ctx context.Context, name strin
 		return nil, fmt.Errorf("role mapping %s not found", name)
 	}
 
-	return role.Rules.Field.Username, nil
+	var users []string
+	if role.Rules.Field != nil {
+		users = append(users, role.Rules.Field.Username...)
+	}
+
+	for _, rule := range role.Rules.All {
+		users = append(users, rule.Field.Username...)
+	}
+
+	return users, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
 func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var rv []*v2.Grant
 	roles, err := r.client.ListDeploymentRoleMapping(ctx)
@@ -121,17 +130,81 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 			continue
 		}
 
-		users := role.Rules.Field.Username
+		userSet := make(map[string]struct{})
+		groupSet := make(map[string]struct{})
+
+		addUsers := func(users []string) {
+			for _, u := range users {
+				userSet[u] = struct{}{}
+			}
+		}
+		addGroups := func(groups []string) {
+			for _, g := range groups {
+				groupSet[g] = struct{}{}
+			}
+		}
+
+		if role.Rules.Field != nil {
+			addUsers(role.Rules.Field.Username)
+			addGroups(role.Rules.Field.Groups)
+		}
+
+		for _, rule := range role.Rules.All {
+			addUsers(rule.Field.Username)
+			addGroups(rule.Field.Groups)
+		}
+
+		for _, rule := range role.Rules.Any {
+			addUsers(rule.Field.Username)
+			addGroups(rule.Field.Groups)
+		}
+
+		users := make([]string, 0, len(userSet))
+		for u := range userSet {
+			users = append(users, u)
+		}
+		groups := make([]string, 0, len(groupSet))
+		for g := range groupSet {
+			groups = append(groups, g)
+		}
 
 		for _, userName := range users {
 			ur, err := deploymentUserResource(&elastic.DeploymentUser{
 				Username: userName,
 			})
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("error creating role mapping resource for user %s: %w", resource.Id.Resource, err)
+				return nil, "", nil, fmt.Errorf("error creating deployment user resource for user %s: %w", userName, err)
 			}
 
 			gr := grant.NewGrant(resource, roleMembership, ur.Id)
+			rv = append(rv, gr)
+		}
+
+		for _, groupDN := range groups {
+			groupRes := &v2.Resource{
+				Id: &v2.ResourceId{
+					ResourceType: "group",
+					Resource:     groupDN,
+				},
+			}
+
+			ent := ent.NewAssignmentEntitlement(resource, roleMembership)
+			bidEnt, err := bid.MakeBid(ent)
+			if err != nil {
+				return nil, "", nil, fmt.Errorf("failed to build Baton ID for entitlement: %w", err)
+			}
+
+			gr := grant.NewGrant(
+				resource,
+				roleMembership,
+				groupRes.Id,
+				grant.WithAnnotation(&v2.ExternalResourceMatchID{Id: groupDN}),
+				grant.WithAnnotation(&v2.GrantExpandable{
+					EntitlementIds: []string{bidEnt},
+					Shallow:        true,
+				}),
+			)
+
 			rv = append(rv, gr)
 		}
 	}
