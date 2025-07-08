@@ -36,14 +36,15 @@ type Organization struct {
 type MappingRolesResponse struct {
 	Roles        []string `json:"roles,omitempty"`
 	Enabled      bool     `json:"enabled,omitempty"`
-	Rules        Rule     `json:"rules,omitempty"`
+	Rules        Rules    `json:"rules,omitempty"`
 	RuleTemplate any      `json:"role_templates,omitempty"`
 	Metadata     any      `json:"metadata,omitempty"`
 }
 
 type Rules struct {
-	Field map[string][]any `json:"field,omitempty"`
-	All   any              `json:"all,omitempty"`
+	Field *Field `json:"field,omitempty"`
+	All   []Rule `json:"all,omitempty"`
+	Any   []Rule `json:"any,omitempty"`
 }
 
 type Rule struct {
@@ -76,6 +77,7 @@ type MappingRolesBody struct {
 
 type Field struct {
 	Username StringOrSlice `json:"username,omitempty"`
+	Groups   StringOrSlice `json:"groups,omitempty"`
 }
 
 type RequestRoleBody struct {
