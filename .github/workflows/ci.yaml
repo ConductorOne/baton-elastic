@@ -4,12 +4,12 @@ jobs:
   go-lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.23.x
-      - name: Checkout code
-        uses: actions/checkout@v3
+          go-version-file: 'go.mod'
       - name: Run linters
         uses: golangci/golangci-lint-action@v8
         with:
@@ -18,22 +18,21 @@ jobs:
   go-test:
     strategy:
       matrix:
-        go-version: [1.23.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Install Go
         if: success()
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ matrix.go-version }}
-      - name: Checkout code
-        uses: actions/checkout@v3
+          go-version-file: 'go.mod'
       - name: go tests
         run: go test -v -covermode=count -json ./... > test.json
       - name: annotate go tests
         if: always()
-        uses: guyarb/golang-test-annotations@v0.5.1
+        uses: guyarb/golang-test-annotations@v0.6.0
         with:
           test-results: test.json
   test-self-hosted:
@@ -52,13 +51,13 @@ jobs:
 
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Install Go
         uses: actions/setup-go@v4
         with:
-          go-version: 1.23.x
-
-      - name: Checkout code
-        uses: actions/checkout@v3
+          go-version-file: 'go.mod'
 
       - name: Start Elasticsearch like start-local script
         run: |
