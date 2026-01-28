@@ -1,1 +1,81 @@
-{"resourceTypeCapabilities":[{"resourceType":{"id":"organization","displayName":"Organization"},"capabilities":["CAPABILITY_SYNC"]},{"resourceType":{"id":"user","displayName":"User","traits":["TRAIT_USER"],"annotations":[{"@type":"type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"}]},"capabilities":["CAPABILITY_SYNC"]},{"resourceType":{"id":"role","displayName":"Deployment Role","traits":["TRAIT_ROLE"]},"capabilities":["CAPABILITY_SYNC","CAPABILITY_PROVISION"]},{"resourceType":{"id":"deploymentUser","displayName":"Deployment User","traits":["TRAIT_USER"],"annotations":[{"@type":"type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"}]},"capabilities":["CAPABILITY_SYNC"]},{"resourceType":{"id":"roleMapping","displayName":"Role Mapping"},"capabilities":["CAPABILITY_SYNC","CAPABILITY_PROVISION"]}]}
+{
+  "@type":  "type.googleapis.com/c1.connector.v2.ConnectorCapabilities",
+  "resourceTypeCapabilities":  [
+    {
+      "resourceType":  {
+        "id":  "deploymentUser",
+        "displayName":  "Deployment User",
+        "traits":  [
+          "TRAIT_USER"
+        ],
+        "annotations":  [
+          {
+            "@type":  "type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"
+          }
+        ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC"
+      ],
+      "permissions":  {}
+    },
+    {
+      "resourceType":  {
+        "id":  "organization",
+        "displayName":  "Organization"
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC"
+      ],
+      "permissions":  {}
+    },
+    {
+      "resourceType":  {
+        "id":  "role",
+        "displayName":  "Deployment Role",
+        "traits":  [
+          "TRAIT_ROLE"
+        ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC",
+        "CAPABILITY_PROVISION"
+      ],
+      "permissions":  {}
+    },
+    {
+      "resourceType":  {
+        "id":  "roleMapping",
+        "displayName":  "Role Mapping"
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC",
+        "CAPABILITY_PROVISION"
+      ],
+      "permissions":  {}
+    },
+    {
+      "resourceType":  {
+        "id":  "user",
+        "displayName":  "User",
+        "traits":  [
+          "TRAIT_USER"
+        ],
+        "annotations":  [
+          {
+            "@type":  "type.googleapis.com/c1.connector.v2.SkipEntitlementsAndGrants"
+          }
+        ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC"
+      ],
+      "permissions":  {}
+    }
+  ],
+  "connectorCapabilities":  [
+    "CAPABILITY_PROVISION",
+    "CAPABILITY_SYNC"
+  ],
+  "credentialDetails":  {}
+}
