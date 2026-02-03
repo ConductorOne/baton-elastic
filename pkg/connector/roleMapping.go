@@ -9,7 +9,6 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/bid"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -54,30 +53,30 @@ func roleMappingResource(role string) (*v2.Resource, error) {
 }
 
 // List returns all the role mappings.
-func (r *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (r *roleMappingBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	if !r.shouldSyncDeployment {
-		return nil, "", nil, nil
+		return nil, nil, nil
 	}
 
 	roles, err := r.client.ListDeploymentRoleMapping(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing role mappings: %w", err)
+		return nil, nil, fmt.Errorf("error listing role mappings: %w", err)
 	}
 
 	var rv []*v2.Resource
 	for role := range roles {
 		ur, err := roleMappingResource(role)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating role mapping resource %s: %w", role, err)
+			return nil, nil, fmt.Errorf("error creating role mapping resource %s: %w", role, err)
 		}
 		rv = append(rv, ur)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 	assignmentOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(deploymentUserResourceType),
@@ -91,7 +90,7 @@ func (r *roleMappingBuilder) Entitlements(ctx context.Context, resource *v2.Reso
 		assignmentOptions...,
 	))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 // GetRoleMappingUsers returns role mapping users.
@@ -118,11 +117,11 @@ func (r *roleMappingBuilder) GetRoleMappingUsers(ctx context.Context, name strin
 	return users, nil
 }
 
-func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	var rv []*v2.Grant
 	roles, err := r.client.ListDeploymentRoleMapping(ctx)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	for roleMappingName, role := range roles {
@@ -173,7 +172,7 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 				Username: userName,
 			})
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("error creating deployment user resource for user %s: %w", userName, err)
+				return nil, nil, fmt.Errorf("error creating deployment user resource for user %s: %w", userName, err)
 			}
 
 			gr := grant.NewGrant(resource, roleMembership, ur.Id)
@@ -191,7 +190,7 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 			ent := ent.NewAssignmentEntitlement(resource, roleMembership)
 			bidEnt, err := bid.MakeBid(ent)
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("failed to build Baton ID for entitlement: %w", err)
+				return nil, nil, fmt.Errorf("failed to build Baton ID for entitlement: %w", err)
 			}
 
 			gr := grant.NewGrant(
@@ -209,7 +208,7 @@ func (r *roleMappingBuilder) Grants(ctx context.Context, resource *v2.Resource, 
 		}
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 func (r *roleMappingBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {

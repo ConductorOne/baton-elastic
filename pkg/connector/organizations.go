@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	grant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -41,25 +39,25 @@ func organizationResource(organization elastic.Organization) (*v2.Resource, erro
 	return ret, nil
 }
 
-func (r *organizationBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (r *organizationBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	orgs, err := r.client.ListOrganizations(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing organizations: %w", err)
+		return nil, nil, fmt.Errorf("error listing organizations: %w", err)
 	}
 
 	var rv []*v2.Resource
 	for _, org := range orgs {
 		or, err := organizationResource(org)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating organization resource: %w", err)
+			return nil, nil, fmt.Errorf("error creating organization resource: %w", err)
 		}
 		rv = append(rv, or)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (r *organizationBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *organizationBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 	assignmentOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(userResourceType),
@@ -73,13 +71,13 @@ func (r *organizationBuilder) Entitlements(_ context.Context, resource *v2.Resou
 		assignmentOptions...,
 	))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (r *organizationBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *organizationBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	members, err := r.client.ListOrgMembers(ctx, resource.Id.Resource)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	var rv []*v2.Grant
@@ -87,13 +85,13 @@ func (r *organizationBuilder) Grants(ctx context.Context, resource *v2.Resource,
 		memberCopy := member
 		ur, err := userResource(&memberCopy, resource.Id)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating user resource for organization %s: %w", resource.Id.Resource, err)
+			return nil, nil, fmt.Errorf("error creating user resource for organization %s: %w", resource.Id.Resource, err)
 		}
 		gr := grant.NewGrant(resource, orgMembership, ur.Id)
 		rv = append(rv, gr)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 func newOrganizationBuilder(client *elastic.Client) *organizationBuilder {

@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
@@ -52,14 +50,14 @@ func userResource(user *elastic.User, parentResourceID *v2.ResourceId) (*v2.Reso
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	if parentResourceID == nil {
-		return nil, "", nil, nil
+		return nil, nil, nil
 	}
 
 	users, err := u.client.ListOrgMembers(ctx, parentResourceID.Resource)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing users: %w", err)
+		return nil, nil, fmt.Errorf("error listing users: %w", err)
 	}
 
 	var rv []*v2.Resource
@@ -67,22 +65,22 @@ func (u *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		userCopy := user
 		ur, err := userResource(&userCopy, parentResourceID)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating user resource: %w", err)
+			return nil, nil, fmt.Errorf("error creating user resource: %w", err)
 		}
 		rv = append(rv, ur)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (u *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (u *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (u *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (u *userBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 func newUserBuilder(client *elastic.Client) *userBuilder {

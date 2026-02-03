@@ -7,7 +7,6 @@ import (
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	ent "github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	grant "github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -54,29 +53,29 @@ func deploymentRoleResource(role string) (*v2.Resource, error) {
 
 // List returns all the roles from the database as resource objects.
 // Roles include a RoleTrait because they are the 'shape' of a standard role.
-func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	if !r.shouldSyncDeployment {
-		return nil, "", nil, nil
+		return nil, nil, nil
 	}
 
 	roles, err := r.client.ListDeploymentRoles(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing roles: %w", err)
+		return nil, nil, fmt.Errorf("error listing roles: %w", err)
 	}
 
 	var rv []*v2.Resource
 	for key := range roles {
 		ur, err := deploymentRoleResource(key)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating role resource for role %s: %w", key, err)
+			return nil, nil, fmt.Errorf("error creating role resource for role %s: %w", key, err)
 		}
 		rv = append(rv, ur)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (r *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 	assignmentOptions := []ent.EntitlementOption{
 		ent.WithGrantableTo(deploymentUserResourceType),
@@ -90,13 +89,13 @@ func (r *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *
 		assignmentOptions...,
 	))
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	users, err := r.client.ListDeploymentUsers(ctx)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	var rv []*v2.Grant
@@ -105,14 +104,14 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 		if hasRole(resource.Id.Resource, user.Roles) {
 			ur, err := deploymentUserResource(&userCopy)
 			if err != nil {
-				return nil, "", nil, fmt.Errorf("error creating user resource for role %s: %w", resource.Id.Resource, err)
+				return nil, nil, fmt.Errorf("error creating user resource for role %s: %w", resource.Id.Resource, err)
 			}
 			gr := grant.NewGrant(resource, roleMembership, ur.Id)
 			rv = append(rv, gr)
 		}
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 func (r *roleBuilder) Grant(ctx context.Context, principal *v2.Resource, entitlement *v2.Entitlement) (annotations.Annotations, error) {

@@ -28,7 +28,7 @@ func main() {
 		connectorName,
 		getConnector,
 		ConfigurationSchema,
-		connectorrunner.WithDefaultCapabilitiesConnectorBuilder(&connector.Connector{}),
+		connectorrunner.WithDefaultCapabilitiesConnectorBuilderV2(&connector.Connector{}),
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())

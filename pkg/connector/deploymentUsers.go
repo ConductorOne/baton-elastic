@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-elastic/pkg/elastic"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
@@ -60,14 +58,14 @@ func deploymentUserResource(user *elastic.DeploymentUser) (*v2.Resource, error) 
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (d *deploymentUserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (d *deploymentUserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	if !d.shouldSyncDeployment {
-		return nil, "", nil, nil
+		return nil, nil, nil
 	}
 
 	users, err := d.client.ListDeploymentUsers(ctx)
 	if err != nil {
-		return nil, "", nil, fmt.Errorf("error listing deployment users: %w", err)
+		return nil, nil, fmt.Errorf("error listing deployment users: %w", err)
 	}
 
 	var rv []*v2.Resource
@@ -75,22 +73,22 @@ func (d *deploymentUserBuilder) List(ctx context.Context, parentResourceID *v2.R
 		userCopy := users[key]
 		ur, err := deploymentUserResource(&userCopy)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating user resource for deployment user %s: %w", key, err)
+			return nil, nil, fmt.Errorf("error creating user resource for deployment user %s: %w", key, err)
 		}
 		rv = append(rv, ur)
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (d *deploymentUserBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (d *deploymentUserBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (d *deploymentUserBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (d *deploymentUserBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 func newDeploymentUserBuilder(client *elastic.Client, shouldSyncDeployment bool) *deploymentUserBuilder {

@@ -3,7 +3,7 @@ package connector
 import (
 	"testing"
 
-	"github.com/conductorone/baton-sdk/pkg/pagination"
+	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +12,7 @@ func TestRoleMappingBuilderGrants(t *testing.T) {
 		t.Skip()
 	}
 
-	pToken := &pagination.Token{}
+	opts := rs.SyncOpAttrs{}
 	cli := getClientForTesting(ctx)
 	assert.Nil(t, cli)
 
@@ -26,7 +26,7 @@ func TestRoleMappingBuilderGrants(t *testing.T) {
 	resource, err := roleMappingResource(roleMapping)
 	assert.Nil(t, err)
 
-	_, _, _, err1 := p.Grants(ctx, resource, pToken)
+	_, _, err1 := p.Grants(ctx, resource, opts)
 	assert.Nil(t, err1)
 }
 
