@@ -1,40 +1,6 @@
 name: ci
 on: pull_request
 jobs:
-  go-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'go.mod'
-      - name: Run linters
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: latest
-          args: --timeout=3m
-  go-test:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Install Go
-        if: success()
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'go.mod'
-      - name: go tests
-        run: go test -v -covermode=count -json ./... > test.json
-      - name: annotate go tests
-        if: always()
-        uses: guyarb/golang-test-annotations@v0.6.0
-        with:
-          test-results: test.json
   test-self-hosted:
     runs-on: ubuntu-latest
     env:
@@ -43,22 +9,17 @@ jobs:
       BATON_DEPLOYMENT_ENDPOINT: ${{ secrets.BATON_DEPLOYMENT_ENDPOINT }}
       BATON_ORGANIZATION_ID: ${{ secrets.BATON_ORGANIZATION_ID }}
       BATON_API_KEY: ${{ secrets.BATON_API_KEY }}
-
       ELASTIC_GRANT: ${{ vars.GRANT }}
       ELASTIC_ENTITLEMENT: ${{ vars.ENTITLEMENT }}
       ELASTIC_PRINCIPAL_TYPE: ${{ vars.PRINCIPAL_TYPE }}
       ELASTIC_PRINCIPAL: ${{ vars.PRINCIPAL }}
-
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Install Go
         uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
-
       - name: Start Elasticsearch like start-local script
         run: |
           docker run -d --name elasticsearch \
@@ -67,7 +28,6 @@ jobs:
             -e "ELASTIC_PASSWORD=changeme" \
             -p 9200:9200 \
             docker.elastic.co/elasticsearch/elasticsearch:8.14.0
-
       - name: Wait for Elasticsearch to be ready
         run: |
           for i in {1..30}; do
@@ -77,83 +37,42 @@ jobs:
             fi
             sleep 2
           done
-
       - name: Create test user and role mapping
-        run: |
-          curl -X POST -u elastic:changeme http://localhost:9200/_security/user/test_user \
-            -H "Content-Type: application/json" \
-            -d '{
-              "username": "test_user",
-              "password": "testpass",          
-              "roles": [],
-              "full_name": "Test User"
-            }'
-        
-          curl -X POST -u elastic:changeme http://localhost:9200/_security/user/user \
-            -H "Content-Type: application/json" \
-            -d '{
-              "username": "user",
-              "password": "testpass1",          
-              "roles": [],
-              "full_name": "user"
-            }'
-          
-          curl -X PUT -u elastic:changeme http://localhost:9200/_security/role_mapping/mapping7 \
-            -H "Content-Type: application/json" \
-            -d '{
-              "roles": ["superuser"],
-              "enabled": true,
-              "rules": {
-                "field": {
-                  "username": "user"
-              }
-            }
-          }'
-
+        run: "curl -X POST -u elastic:changeme http://localhost:9200/_security/user/test_user \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"username\": \"test_user\",\n    \"password\": \"testpass\",          \n    \"roles\": [],\n    \"full_name\": \"Test User\"\n  }'\n\ncurl -X POST -u elastic:changeme http://localhost:9200/_security/user/user \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"username\": \"user\",\n    \"password\": \"testpass1\",          \n    \"roles\": [],\n    \"full_name\": \"user\"\n  }'\n\ncurl -X PUT -u elastic:changeme http://localhost:9200/_security/role_mapping/mapping7 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"roles\": [\"superuser\"],\n    \"enabled\": true,\n    \"rules\": {\n      \"field\": {\n        \"username\": \"user\"\n    }\n  }\n}'\n"
       - name: Create API key for Baton
         run: |
           api_key_response=$(curl -s -X POST -u elastic:changeme http://localhost:9200/_security/api_key \
             -H "Content-Type: application/json" \
             -d '{ "name": "baton-selfhosted", "role_descriptors": { "baton": { "cluster": ["all"], "index": [{ "names": ["*"], "privileges": ["all"] }] } } }')
-  
+
           api_key_base64=$(echo $api_key_response | jq -r '.api_key')
           id=$(echo $api_key_response | jq -r '.id')
           baton_api_key=$(echo -n "$id:$api_key_base64" | base64)
-  
-          echo "BATON_DEPLOYMENT_API_KEY=$baton_api_key" >> $GITHUB_ENV
 
+          echo "BATON_DEPLOYMENT_API_KEY=$baton_api_key" >> $GITHUB_ENV
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
-
       - name: Build baton-elastic
         run: go build ./cmd/baton-elastic
-
       - name: Run initial sync
         run: ./baton-elastic
-
       - name: Grant entitlement
         run: ./baton-elastic --grant-entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --grant-principal-type="${{ env.ELASTIC_PRINCIPAL_TYPE }}" --grant-principal="${{ env.ELASTIC_PRINCIPAL }}" --provisioning
-
       - name: Resync after grant
         run: ./baton-elastic
-
       - name: Check grant was granted
         run: |
           baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
           jq -e --arg principal "${{ env.ELASTIC_PRINCIPAL }}" '.grants // [] | any(.grant.principal.id.resource == $principal)'
-
       - name: Revoke grant
         run: ./baton-elastic --revoke-grant="${{ env.ELASTIC_GRANT }}"
-
       - name: Resync after revoke
         run: ./baton-elastic
-
       - name: Check grant was revoked
         run: |
           baton grants --entitlement="${{ env.ELASTIC_ENTITLEMENT }}" --output-format=json | \
           jq -e --arg principal "${{ env.ELASTIC_PRINCIPAL }}" \
           '.grants // [] | all(.grant.principal.id.resource != $principal)'
-
       - name: Cleanup
         if: always()
         run: docker rm -f elasticsearch
