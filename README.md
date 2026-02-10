@@ -1,4 +1,4 @@
-# `baton-elastic` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-elastic.svg)](https://pkg.go.dev/github.com/conductorone/baton-elastic) ![main ci](https://github.com/conductorone/baton-elastic/actions/workflows/main.yaml/badge.svg)
+# `baton-elastic` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-elastic.svg)](https://pkg.go.dev/github.com/conductorone/baton-elastic) ![ci](https://github.com/conductorone/baton-elastic/actions/workflows/ci.yaml/badge.svg) ![verify](https://github.com/conductorone/baton-elastic/actions/workflows/verify.yaml/badge.svg)
 
 `baton-elastic` is a connector for Elastic built using the [Baton SDK](https://github.com/conductorone/baton-sdk). It communicates with the Elastic API to sync data about Elastic cloud organizations and users. Optionally it can also sync elasticsearch deployment roles and users.
 Check out [Baton](https://github.com/conductorone/baton) to learn more about the project in general.
@@ -45,7 +45,7 @@ By default:
 - Users (if you want to sync only users of specific organization, provide the `--organization-id` flag, otherwise it syncs all users)
 - Organizations
 
-Optional: 
+Optional:
 - Deployment roles
 - Deployment users
 
