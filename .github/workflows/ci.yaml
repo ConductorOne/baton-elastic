@@ -51,7 +51,7 @@ jobs:
 
           echo "BATON_DEPLOYMENT_API_KEY=$baton_api_key" >> $GITHUB_ENV
       - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+        uses: ConductorOne/github-workflows/actions/get-baton@v4
       - name: Build baton-elastic
         run: go build ./cmd/baton-elastic
       - name: Run initial sync
